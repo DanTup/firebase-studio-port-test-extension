@@ -1,26 +1,59 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
+import * as http from 'http';
 import * as vscode from 'vscode';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+	const servers: http.Server[] = [];
+	const bgColors = ['red', 'blue', 'green'];
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "firebase-port-test" is now active!');
+	// 3 "Hello World" servers.
+	for (let i = 0; i < 3; i++) {
+		const s = http.createServer((req, res) => {
+			res.writeHead(200, { 'Content-Type': 'text/html' });
+			res.end(`<html><body bgcolor="${bgColors[i]}"><h1 style="font-family: sans-serif">Server ${i}</h1></body></html>`);
+		});
+		s.listen();
+		servers.push(s);
+	}
+	const frameUris = await Promise.all(servers.map((s) => vscode.Uri.parse(`http://localhost:${(s.address() as any).port}`)).map(vscode.env.asExternalUri));
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('firebase-port-test.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from firebase-port-test!');
+	// Main server that just shows iframes for the others.
+	const mainServer = http.createServer((req, res) => {
+		res.writeHead(200, { 'Content-Type': 'text/html' });
+		res.end(`
+				<!DOCTYPE html>
+				<html><body bgcolor="yellow">
+					<h1 style="font-family: sans-serif">Main Server</h1>
+					${frameUris.map((uri) => `<iframe src="${uri}" width="500" height="100"></iframe><br/>`).join("\n")}
+				</body></html>
+			`);
 	});
+	mainServer.listen();
+	servers.push(mainServer);
+	const mainUri = await vscode.env.asExternalUri(vscode.Uri.parse(`http://localhost:${(mainServer.address() as any).port}`));
 
-	context.subscriptions.push(disposable);
+	// Now open an embedded editor webview that points to the main server.
+	const panel = vscode.window.createWebviewPanel(
+		'helloWorld',
+		'Hello World',
+		vscode.ViewColumn.One,
+		{
+			enableScripts: true,
+			localResourceRoots: []
+		}
+	);
+
+	panel.webview.html = `
+		<html>
+		<body>
+		<h1 style="font-family: sans-serif">Panel HTML</h1>
+		<iframe id="x" src="${mainUri}" width="600" height="500"></iframe>
+		</body>
+		</html>
+	`;
+
+	context.subscriptions.push({
+		dispose: () => {
+			servers.forEach(server => server.close());
+		}
+	});
 }
-
-// This method is called when your extension is deactivated
-export function deactivate() {}
