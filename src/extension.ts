@@ -7,12 +7,25 @@ export async function setUpServers(context: vscode.ExtensionContext, delay: numb
 	const wsServers: Array<{ close: () => void }> = [];
 	const bgColors = ['red', 'blue', 'green'];
 
-	// 3 "Hello World" servers which consist ot a HTTP server that serves a simple HTML page
-	// and a WebSocket server that sends a "Hello World" message on connection.
+	// Create 3 sets of HTTP Servers. Each set has a HTTP server that handles a WebSocket at /ws (and just
+	// serves up a simple message of HTML at /) and another HTTP server that serves up a colourful HTML page
+	// that connects to the WebSocket server and displays any messages received).
 	for (let i = 0; i < 3; i++) {
-		// Create the WebSocket server and a HTTP server to support it.
-		const wsHttpServer = http.createServer();
-		const wsServer = new WebSocket.Server({ server: wsHttpServer });
+		// Create the WebSocket HTTP Server.
+		const wsHttpServer = http.createServer((req, res) => {
+			// Force upgrade for /ws which will be handled by wsServer below.
+			if (req.url === '/ws') {
+				// Let ws handle the upgrade
+				res.writeHead(426, { 'Content-Type': 'text/plain' });
+				res.end('Upgrade Required');
+			} else {
+				// Otherwise, just serve up a simple HTML page.
+				res.writeHead(200, { 'Content-Type': 'text/html' });
+				res.end('<html><body>This server is only for the WebSocket server at /ws</body></html>');
+			}
+		});
+		// Set up the WebSocket server.
+		const wsServer = new WebSocket.Server({ server: wsHttpServer, path: '/ws' });
 		wsServer.on('connection', (socket: WebSocket.WebSocket) => {
 			socket.send(`Hello from WebSocket Server ${i}`);
 		});
@@ -20,10 +33,11 @@ export async function setUpServers(context: vscode.ExtensionContext, delay: numb
 		wsServers.push(wsHttpServer);
 		wsServers.push(wsServer);
 
-		// Get the URI for the WebSocket.
+		// Get the URI for the WebSocket so we can connect to it from the HTML page.
 		const wsPort = (wsHttpServer.address() as any).port;
-		const wsUri = await vscode.env.asExternalUri(vscode.Uri.parse(`http://localhost:${wsPort}`));
+		const wsUri = await vscode.env.asExternalUri(vscode.Uri.parse(`http://localhost:${wsPort}/ws`));
 
+		// Set up an HTTP server to serve a colourful HTML page that connects to the WebSocket server.
 		let htmlPort: number | undefined;
 		const htmlServer = http.createServer((req, res) => {
 			res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -57,9 +71,10 @@ export async function setUpServers(context: vscode.ExtensionContext, delay: numb
 		htmlServers.push(htmlServer);
 	}
 
+	// Get the public URI for each of the servers.
 	const frameUris = await Promise.all(htmlServers.map((s) => vscode.Uri.parse(`http://localhost:${(s.address() as any).port}`)).map(vscode.env.asExternalUri));
 
-	// Main server that just shows iframes for the others.
+	// The main server that shows iframes for the other servers.
 	const mainServer = http.createServer((req, res) => {
 		res.writeHead(200, { 'Content-Type': 'text/html' });
 		res.end(`
