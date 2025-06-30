@@ -122,8 +122,8 @@ export async function setUpServers(context: vscode.ExtensionContext, activateDel
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-	const activateDelay = vscode.workspace.getConfiguration('portTest').get<number>('activateDelay', 0);
-	const openWebViewDelay = vscode.workspace.getConfiguration('portTest').get<number>('openWebViewDelay', 0);
+	const activateDelay = vscode.workspace.getConfiguration('portTest').get<number>('activateDelay', 1000);
+	const openWebViewDelay = vscode.workspace.getConfiguration('portTest').get<number>('openWebViewDelay', 1000);
 
 	if (activateDelay) {
 		// Don't delay activation.
