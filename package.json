@@ -2,14 +2,19 @@
   "name": "firebase-port-test",
   "displayName": "firebase-port-test",
   "description": "",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.94.0"
   },
+  "license": "MIT",
   "categories": [],
   "activationEvents": [
     "*"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DanTup/firebase-studio-port-test-extension"
+  },
   "main": "./out/extension.js",
   "contributes": {},
   "scripts": {
