@@ -2,7 +2,7 @@ import * as http from 'http';
 import * as vscode from 'vscode';
 import * as WebSocket from 'ws';
 
-export async function setUpServers(context: vscode.ExtensionContext, delay: number) {
+export async function setUpServers(context: vscode.ExtensionContext, activateDelay: number, openWebViewDelay: number) {
 	const htmlServers: http.Server[] = [];
 	const wsServers: Array<{ close: () => void }> = [];
 	const bgColors = ['red', 'blue', 'green'];
@@ -80,7 +80,7 @@ export async function setUpServers(context: vscode.ExtensionContext, delay: numb
 		res.end(`
 				<!DOCTYPE html>
 				<html><body bgcolor="yellow" style="font-family: sans-serif">
-					<h3>Main Server (${delay}ms delay)</h1>
+					<h3>Main Server (delays: ${activateDelay}ms/${openWebViewDelay}ms)</h1>
 					${frameUris.map((uri) => `<iframe src="${uri}" width="500" height="150"></iframe><br/>`).join("\n")}
 				</body></html>
 			`);
@@ -88,6 +88,17 @@ export async function setUpServers(context: vscode.ExtensionContext, delay: numb
 	mainServer.listen();
 	htmlServers.push(mainServer);
 	const mainUri = await vscode.env.asExternalUri(vscode.Uri.parse(`http://localhost:${(mainServer.address() as any).port}`));
+
+	context.subscriptions.push({
+		dispose: () => {
+			htmlServers.forEach(server => server.close());
+			wsServers.forEach(ws => ws.close());
+		}
+	});
+
+	if (openWebViewDelay) {
+		await new Promise((resolve) => setTimeout(resolve, openWebViewDelay));
+	}
 
 	// Now open an embedded editor webview that points to the main server.
 	const panel = vscode.window.createWebviewPanel(
@@ -108,23 +119,17 @@ export async function setUpServers(context: vscode.ExtensionContext, delay: numb
 		</body>
 		</html>
 	`;
-
-	context.subscriptions.push({
-		dispose: () => {
-			htmlServers.forEach(server => server.close());
-			wsServers.forEach(ws => ws.close());
-		}
-	});
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-	const delay = vscode.workspace.getConfiguration('portTest').get<number>('delay', 0);
+	const activateDelay = vscode.workspace.getConfiguration('portTest').get<number>('activateDelay', 0);
+	const openWebViewDelay = vscode.workspace.getConfiguration('portTest').get<number>('openWebViewDelay', 0);
 
-	if (delay) {
+	if (activateDelay) {
 		// Don't delay activation.
-		new Promise((resolve) => setTimeout(resolve, delay)).then(() => setUpServers(context, delay));
+		new Promise((resolve) => setTimeout(resolve, activateDelay)).then(() => setUpServers(context, activateDelay, openWebViewDelay));
 	} else {
 		// Else, delay activation until we're done.
-		await setUpServers(context, delay);
+		await setUpServers(context, activateDelay, openWebViewDelay);
 	}
 }
