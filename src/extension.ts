@@ -14,7 +14,7 @@ export async function setUpServers(context: vscode.ExtensionContext, delay: numb
 		const wsHttpServer = http.createServer();
 		const wsServer = new WebSocket.Server({ server: wsHttpServer });
 		wsServer.on('connection', (socket: WebSocket.WebSocket) => {
-			socket.send('Hello from WebSocket Server ${i}');
+			socket.send(`Hello from WebSocket Server ${i}`);
 		});
 		wsHttpServer.listen();
 		wsServers.push(wsHttpServer);
@@ -24,12 +24,13 @@ export async function setUpServers(context: vscode.ExtensionContext, delay: numb
 		const wsPort = (wsHttpServer.address() as any).port;
 		const wsUri = await vscode.env.asExternalUri(vscode.Uri.parse(`http://localhost:${wsPort}`));
 
+		let htmlPort: number | undefined;
 		const htmlServer = http.createServer((req, res) => {
 			res.writeHead(200, { 'Content-Type': 'text/html' });
 			res.end(`
 				<html>
 				<body bgcolor="${bgColors[i]}" style="font-family: sans-serif">
-					<h1>Server ${i}</h1>
+					<h3>Server ${i} (HTML Port: ${htmlPort}, WS Port: ${wsPort})</h1>
 					<script>
 						function append(s) {
 							const msg = document.createElement('p');
@@ -52,6 +53,7 @@ export async function setUpServers(context: vscode.ExtensionContext, delay: numb
 			`);
 		});
 		htmlServer.listen();
+		htmlPort = (htmlServer.address() as any).port;
 		htmlServers.push(htmlServer);
 	}
 
@@ -62,8 +64,8 @@ export async function setUpServers(context: vscode.ExtensionContext, delay: numb
 		res.writeHead(200, { 'Content-Type': 'text/html' });
 		res.end(`
 				<!DOCTYPE html>
-				<html><body bgcolor="yellow">
-					<h1 style="font-family: sans-serif">Main Server (${delay}ms delay)</h1>
+				<html><body bgcolor="yellow" style="font-family: sans-serif">
+					<h3>Main Server (${delay}ms delay)</h1>
 					${frameUris.map((uri) => `<iframe src="${uri}" width="500" height="150"></iframe><br/>`).join("\n")}
 				</body></html>
 			`);
