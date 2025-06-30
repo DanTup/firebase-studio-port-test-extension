@@ -121,7 +121,10 @@ export async function activate(context: vscode.ExtensionContext) {
 	const delay = vscode.workspace.getConfiguration('portTest').get<number>('delay', 0);
 
 	if (delay) {
-		await new Promise((resolve) => setTimeout(resolve, delay));
+		// Don't delay activation.
+		new Promise((resolve) => setTimeout(resolve, delay)).then(() => setUpServers(context, delay));
+	} else {
+		// Else, delay activation until we're done.
+		await setUpServers(context, delay);
 	}
-	await setUpServers(context, delay);
 }
