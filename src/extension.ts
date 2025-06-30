@@ -1,7 +1,7 @@
 import * as http from 'http';
 import * as vscode from 'vscode';
 
-export async function activate(context: vscode.ExtensionContext) {
+export async function setUpServers(context: vscode.ExtensionContext) {
 	const servers: http.Server[] = [];
 	const bgColors = ['red', 'blue', 'green'];
 
@@ -56,4 +56,9 @@ export async function activate(context: vscode.ExtensionContext) {
 			servers.forEach(server => server.close());
 		}
 	});
+}
+
+export async function activate(context: vscode.ExtensionContext) {
+	await new Promise((resolve) => setTimeout(resolve, 1000));
+	await setUpServers(context);
 }
