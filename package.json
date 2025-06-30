@@ -7,7 +7,9 @@
     "vscode": "^1.94.0"
   },
   "categories": [],
-  "activationEvents": ["*"],
+  "activationEvents": [
+    "*"
+  ],
   "main": "./out/extension.js",
   "contributes": {},
   "scripts": {
@@ -17,11 +19,15 @@
     "lint": "eslint src"
   },
   "devDependencies": {
-    "@types/vscode": "^1.94.0",
     "@types/node": "20.x",
+    "@types/vscode": "^1.94.0",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "eslint": "^9.25.1",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
   }
 }
